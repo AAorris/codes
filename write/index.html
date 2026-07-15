@@ -1,87 +1,522 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>fragment editor — proof bench</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --paper:#FCFCFA; --ink:#1A1C1E; --rule:#D8D9D4; --faint:#8A8C88;
-  --blue:#7BBFDA; --blue-ink:#2E7BA6; --blue-wash:#EDF6FA;
-  --mono:'JetBrains Mono',ui-monospace,monospace;
-  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --disp:'Fraunces',Georgia,serif;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
-header{display:flex;align-items:baseline;gap:16px;padding:20px 28px 14px;border-bottom:1px solid var(--rule)}
-header h1{font-family:var(--disp);font-weight:600;font-size:22px;letter-spacing:-0.01em}
-header .sub{color:var(--faint);font-size:12.5px}
-main{display:grid;grid-template-columns:minmax(340px,1fr) minmax(0,1.4fr);min-height:calc(100vh - 62px)}
-@media(max-width:880px){main{grid-template-columns:1fr}}
-.composer{border-right:1px solid var(--rule);padding:22px 24px;display:flex;flex-direction:column;gap:14px}
-.label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
-textarea{width:100%;flex:1;min-height:300px;resize:vertical;border:1px solid var(--rule);border-radius:6px;background:#fff;
-  font-family:var(--mono);font-size:13.5px;line-height:1.65;padding:16px;color:var(--ink)}
-textarea:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:transparent}
-.hint{font-size:12px;color:var(--faint)}
-.hint code{font-family:var(--mono);font-size:11.5px;background:var(--blue-wash);color:var(--blue-ink);padding:1px 5px;border-radius:3px}
-.define{border:1px dashed var(--blue);background:var(--blue-wash);border-radius:6px;padding:14px;display:none}
-.define.show{display:block}
-.define p{font-size:13px;margin-bottom:8px}
-.define p code{font-family:var(--mono);font-weight:700;color:var(--blue-ink)}
-.define input{width:100%;font-family:var(--mono);font-size:12.5px;padding:8px 10px;border:1px solid var(--blue);border-radius:4px;margin-bottom:8px;background:#fff}
-.define input:focus{outline:2px solid var(--blue-ink);outline-offset:1px}
-.define .drow{display:flex;gap:8px}
-.define button{font-size:12.5px;font-weight:600;padding:6px 14px;border-radius:4px;border:1px solid var(--blue-ink);cursor:pointer;background:var(--blue-ink);color:#fff}
-.define button.ghost{background:transparent;color:var(--blue-ink)}
-.define .dhint{font-size:11.5px;color:var(--blue-ink);margin-top:6px}
-.schema{border:1px solid var(--rule);border-radius:6px;background:#fff}
-.schema summary{cursor:pointer;padding:10px 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:600;user-select:none}
-.schema .terms{padding:4px 14px 12px;display:flex;flex-direction:column;gap:6px}
-.schema .term{font-family:var(--mono);font-size:12px;display:flex;gap:10px;align-items:baseline}
-.schema .term .name{color:var(--blue-ink);font-weight:700;min-width:110px}
-.schema .term .exp{color:var(--faint)}
-.proofs{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:minmax(220px,1fr)}
-@media(max-width:1100px){.proofs{grid-template-columns:1fr}}
-.proof{border-bottom:1px solid var(--rule);display:flex;flex-direction:column;min-width:0}
-.proof:nth-child(odd){border-right:1px solid var(--rule)}
-@media(max-width:1100px){.proof:nth-child(odd){border-right:none}}
-.proof .bar{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--rule)}
-.proof .bar .tgt{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--blue-ink)}
-.proof .bar .mime{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-left:auto}
-.proof .sheet{flex:1;overflow:auto;padding:16px 18px;min-height:0}
-pre.raw{font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;color:var(--ink)}
-/* rendered html proof styles — target the classes fragment.js emits */
-.sheet.htmlview{font-family:var(--disp);font-size:15.5px;line-height:1.6}
-.sheet.htmlview p.prose{margin-bottom:.75em}
-.sheet.htmlview aside{border-left:3px solid var(--blue);background:var(--blue-wash);padding:8px 12px;margin:.75em 0;font-size:14px;font-family:var(--sans)}
-.sheet.htmlview blockquote{border-left:3px solid var(--rule);padding:4px 12px;margin:.75em 0;color:#444;font-style:italic}
-.sheet.htmlview figure{margin:.75em 0;padding:10px;border:1px solid var(--rule);border-radius:4px;font-family:var(--sans)}
-.sheet.htmlview .frag-ph{background:repeating-linear-gradient(45deg,#f2f2ef,#f2f2ef 8px,#fafaf7 8px,#fafaf7 16px);border:1px dashed var(--rule);border-radius:3px;height:64px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--faint);margin-bottom:6px}
-.sheet.htmlview figcaption{font-size:12.5px;color:var(--faint)}
-.sheet.htmlview code{font-family:var(--mono);font-size:.85em;background:#f1f1ee;padding:1px 5px;border-radius:3px}
-.sheet.htmlview .frag-embed{border:1px solid var(--blue);border-radius:4px;padding:8px 12px;margin:.75em 0;font-family:var(--mono);font-size:12px;color:var(--blue-ink);background:var(--blue-wash)}
-.sheet.htmlview ul,.sheet.htmlview ol{margin:.75em 0;padding-left:1.5em}
-.sheet.htmlview li{margin:.2em 0}
-.sheet.htmlview table{border-collapse:collapse;margin:.75em 0;font-family:var(--sans);font-size:13.5px}
-.sheet.htmlview th,.sheet.htmlview td{border:1px solid var(--rule);padding:5px 10px;text-align:left}
-.sheet.htmlview th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600}
-.frag-err{color:#B3452E;font-family:var(--mono);font-size:12px}
-.j-k{color:var(--blue-ink)} .j-s{color:#3A6B35}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fragment editor — proof bench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --paper: #FCFCFA;
+      --ink: #1A1C1E;
+      --rule: #D8D9D4;
+      --faint: #8A8C88;
+      --blue: #7BBFDA;
+      --blue-ink: #2E7BA6;
+      --blue-wash: #EDF6FA;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --disp: 'Fraunces', Georgia, serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 20px 28px 14px;
+      border-bottom: 1px solid var(--rule)
+    }
+
+    header h1 {
+      font-family: var(--disp);
+      font-weight: 600;
+      font-size: 22px;
+      letter-spacing: -0.01em
+    }
+
+    header .sub {
+      color: var(--faint);
+      font-size: 12.5px
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(340px, 1fr) minmax(0, 1.4fr);
+      min-height: calc(100vh - 62px)
+    }
+
+    @media(max-width:880px) {
+      main {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .composer {
+      border-right: 1px solid var(--rule);
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px
+    }
+
+    .label {
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--faint);
+      font-weight: 600
+    }
+
+    textarea {
+      width: 100%;
+      flex: 1;
+      min-height: 300px;
+      resize: vertical;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: #fff;
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.65;
+      padding: 16px;
+      color: var(--ink)
+    }
+
+    textarea:focus {
+      outline: 2px solid var(--blue);
+      outline-offset: 1px;
+      border-color: transparent
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--faint)
+    }
+
+    .hint code {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      background: var(--blue-wash);
+      color: var(--blue-ink);
+      padding: 1px 5px;
+      border-radius: 3px
+    }
+
+    .define {
+      border: 1px dashed var(--blue);
+      background: var(--blue-wash);
+      border-radius: 6px;
+      padding: 14px;
+      display: none
+    }
+
+    .define.show {
+      display: block
+    }
+
+    .define p {
+      font-size: 13px;
+      margin-bottom: 8px
+    }
+
+    .define p code {
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--blue-ink)
+    }
+
+    .define input {
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      padding: 8px 10px;
+      border: 1px solid var(--blue);
+      border-radius: 4px;
+      margin-bottom: 8px;
+      background: #fff
+    }
+
+    .define input:focus {
+      outline: 2px solid var(--blue-ink);
+      outline-offset: 1px
+    }
+
+    .define .drow {
+      display: flex;
+      gap: 8px
+    }
+
+    .define button {
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 4px;
+      border: 1px solid var(--blue-ink);
+      cursor: pointer;
+      background: var(--blue-ink);
+      color: #fff
+    }
+
+    .define button.ghost {
+      background: transparent;
+      color: var(--blue-ink)
+    }
+
+    .define .dhint {
+      font-size: 11.5px;
+      color: var(--blue-ink);
+      margin-top: 6px
+    }
+
+    .schema {
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: #fff
+    }
+
+    .schema summary {
+      cursor: pointer;
+      padding: 10px 14px;
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--faint);
+      font-weight: 600;
+      user-select: none
+    }
+
+    .schema .terms {
+      padding: 4px 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px
+    }
+
+    .schema .term {
+      font-family: var(--mono);
+      font-size: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: baseline
+    }
+
+    .schema .term .name {
+      color: var(--blue-ink);
+      font-weight: 700;
+      min-width: 110px
+    }
+
+    .schema .term .exp {
+      color: var(--faint)
+    }
+
+    .proofs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: minmax(220px, 1fr)
+    }
+
+    @media(max-width:1100px) {
+      .proofs {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .proof {
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      flex-direction: column;
+      min-width: 0
+    }
+
+    .proof:nth-child(odd) {
+      border-right: 1px solid var(--rule)
+    }
+
+    @media(max-width:1100px) {
+      .proof:nth-child(odd) {
+        border-right: none
+      }
+    }
+
+    .proof .bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--rule)
+    }
+
+    .proof .bar .tgt {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: var(--blue-ink)
+    }
+
+    .proof .bar .mime {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--faint);
+      margin-left: auto
+    }
+
+    .proof .sheet {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 18px;
+      min-height: 0
+    }
+
+    pre.raw {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--ink)
+    }
+
+    /* rendered html proof styles — target the classes fragment.js emits */
+    .sheet.htmlview {
+      font-family: var(--disp);
+      font-size: 15.5px;
+      line-height: 1.6;
+      max-width: 72ch
+    }
+
+    .sheet.htmlview h1,
+    .sheet.htmlview h2,
+    .sheet.htmlview h3 {
+      font-family: var(--disp);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: .9em 0 .4em
+    }
+
+    .sheet.htmlview h1 {
+      font-size: 24px
+    }
+
+    .sheet.htmlview h2 {
+      font-size: 19px
+    }
+
+    .sheet.htmlview h3 {
+      font-size: 16px
+    }
+
+    .sheet.htmlview hr {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 1em 0
+    }
+
+    .sheet.htmlview .frag-center {
+      text-align: center
+    }
+
+    .sheet.htmlview .frag-right {
+      text-align: right
+    }
+
+    .sheet.htmlview pre {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.55;
+      background: #f1f1ee;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin: .75em 0;
+      overflow-x: auto
+    }
+
+    .sheet.htmlview pre code {
+      background: none;
+      padding: 0;
+      font-size: inherit
+    }
+
+    .sheet.htmlview p.prose {
+      margin-bottom: .75em
+    }
+
+    .sheet.htmlview aside {
+      border-left: 3px solid var(--blue);
+      background: var(--blue-wash);
+      padding: 8px 12px;
+      margin: .75em 0;
+      font-size: 14px;
+      font-family: var(--sans)
+    }
+
+    .sheet.htmlview blockquote {
+      border-left: 3px solid var(--rule);
+      padding: 4px 12px;
+      margin: .75em 0;
+      color: #444;
+      font-style: italic
+    }
+
+    .sheet.htmlview figure {
+      margin: .75em 0;
+      padding: 10px;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      font-family: var(--sans)
+    }
+
+    .sheet.htmlview .frag-ph {
+      background: repeating-linear-gradient(45deg, #f2f2ef, #f2f2ef 8px, #fafaf7 8px, #fafaf7 16px);
+      border: 1px dashed var(--rule);
+      border-radius: 3px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--faint);
+      margin-bottom: 6px
+    }
+
+    .sheet.htmlview figcaption {
+      font-size: 12.5px;
+      color: var(--faint)
+    }
+
+    .sheet.htmlview .frag-lit {
+      margin: .75em 0;
+      padding: 12px 14px;
+      border: 1px dashed var(--rule);
+      border-radius: 4px;
+      background: #fafaf7
+    }
+
+    .sheet.htmlview .frag-lit-src {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--blue-ink);
+      margin: 0 0 10px;
+      white-space: pre-wrap
+    }
+
+    .sheet.htmlview .frag-lit-out>*:first-child {
+      margin-top: 0
+    }
+
+    .sheet.htmlview .frag-lit-out>*:last-child {
+      margin-bottom: 0
+    }
+
+    .sheet.htmlview .frag-lit figure {
+      margin: 0
+    }
+
+    .sheet.htmlview code {
+      font-family: var(--mono);
+      font-size: .85em;
+      background: #f1f1ee;
+      padding: 1px 5px;
+      border-radius: 3px
+    }
+
+    .sheet.htmlview .frag-embed {
+      border: 1px solid var(--blue);
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin: .75em 0;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--blue-ink);
+      background: var(--blue-wash)
+    }
+
+    .sheet.htmlview ul,
+    .sheet.htmlview ol {
+      margin: .75em 0;
+      padding-left: 1.5em
+    }
+
+    .sheet.htmlview li {
+      margin: .2em 0
+    }
+
+    .sheet.htmlview .frag-fill {
+      float: right;
+      font-variant-numeric: tabular-nums
+    }
+
+    .sheet.htmlview table {
+      border-collapse: collapse;
+      margin: .75em 0;
+      font-family: var(--sans);
+      font-size: 13.5px
+    }
+
+    .sheet.htmlview th,
+    .sheet.htmlview td {
+      border: 1px solid var(--rule);
+      padding: 5px 10px;
+      text-align: left
+    }
+
+    .sheet.htmlview th {
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--faint);
+      font-weight: 600
+    }
+
+    .frag-err {
+      color: #B3452E;
+      font-family: var(--mono);
+      font-size: 12px
+    }
+
+    .j-k {
+      color: var(--blue-ink)
+    }
+
+    .j-s {
+      color: #3A6B35
+    }
+  </style>
 </head>
+
 <body>
-<header>
-  <h1>proof bench</h1>
-  <span class="sub">fragment preview — one source, four targets</span>
-</header>
-<main>
-  <section class="composer">
-    <span class="label">Fragment source</span>
-    <textarea id="src" spellcheck="false" aria-label="Fragment source">Went down a rabbit hole on IR design today. The trick is making degradation a structural guarantee, not a hope.
+  <header>
+    <h1>proof bench</h1>
+    <span class="sub">fragment preview — one source, four targets</span>
+  </header>
+  <main>
+    <section class="composer">
+      <span class="label">Fragment source</span>
+      <textarea id="src" spellcheck="false" aria-label="Fragment source">#title: IR design notes
+
+Went down a rabbit hole on IR design today. The trick is making degradation a structural guarantee, not a hope.
 
 #aside[this connects to the doc-server notes from March — see #embed(frag:3k1x)]
 
@@ -89,81 +524,119 @@ pre.raw{font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-w
 
 #quote[Everything is a fragment; the resource is just the root node of the request.]
 
-The tiers so far: #list[#item[html keeps full semantics]#item[markdown keeps structure]#item[plaintext keeps meaning]]
+The tiers so far: #list[
+  #item: html keeps full semantics
+  #item: markdown keeps structure
+  #item: plaintext keeps meaning
+]
 
-#table[#row(header)[#cell[target]#cell[mime]]#row[#cell[html]#cell[text/html]]#row[#cell[markdown]#cell[text/markdown]]#row[#cell[plain]#cell[text/plain]]]</textarea>
-    <div class="hint">plain prose, blank lines split paragraphs · escape into structure with <code>#term[content]</code> or <code>#term(arg)[content]</code> · unknown terms prompt a definition</div>
+#table:
+ #row(header):
+  #cell[target]
+  #cell[mime]
+ #row: #cell[html]     #cell[text/html]
+ #row: #cell[markdown] #cell[text/markdown]
+ #row: #cell[plain]    #cell[text/plain]
 
-    <div class="define" id="defineCard" role="region" aria-live="polite">
-      <p>unknown term <code id="defName">#x</code> — define its expansion:</p>
-      <input id="defExp" placeholder="e.g.  quote[NOTE: {content}]" aria-label="Expansion template">
-      <div class="drow">
-        <button id="defSave">Define term</button>
-        <button class="ghost" id="defSkip">Leave undefined</button>
+#section: Typesetting
+
+Prose wraps to the measure in plaintext and markdown; html gets max-width. Escaping the flow entirely:
+
+#codeblock(js):
+ const { tree } = compile(src);
+ render(tree, 'txt', { width: 72 });
+
+#rule
+
+#center: — fin —</textarea>
+      <div class="hint">plain prose, blank lines split paragraphs · escape into structure with
+        <code>#term[content]</code> or <code>#term(arg)[content]</code> · colon sugar: <code>#term: rest of line</code>,
+        or <code>#term:</code> alone taking the indented lines below · unknown terms prompt a definition</div>
+
+      <div class="define" id="defineCard" role="region" aria-live="polite">
+        <p>unknown term <code id="defName">#x</code> — define its expansion:</p>
+        <input id="defExp" placeholder="e.g.  quote[NOTE: {content}]" aria-label="Expansion template">
+        <div class="drow">
+          <button id="defSave">Define term</button>
+          <button class="ghost" id="defSkip">Leave undefined</button>
+        </div>
+        <div class="dhint">use <b>{content}</b> for the body and <b>{1}</b>, <b>{2}</b>… for args. Macros expand into
+          kernel terms, so every target renders them for free.</div>
       </div>
-      <div class="dhint">use <b>{content}</b> for the body and <b>{1}</b>, <b>{2}</b>… for args. Macros expand into kernel terms, so every target renders them for free.</div>
-    </div>
 
-    <details class="schema" open>
-      <summary>Schema — registered terms</summary>
-      <div class="terms" id="termList"></div>
-    </details>
-  </section>
+      <details class="schema" open>
+        <summary>Schema — registered terms</summary>
+        <div class="terms" id="termList"></div>
+      </details>
+    </section>
 
-  <section class="proofs" aria-label="Compilation proofs">
-    <div class="proof"><div class="bar"><span class="tgt">html</span><span class="mime">text/html</span></div><div class="sheet htmlview" id="outHtml"></div></div>
-    <div class="proof"><div class="bar"><span class="tgt">markdown</span><span class="mime">text/markdown</span></div><div class="sheet"><pre class="raw" id="outMd"></pre></div></div>
-    <div class="proof"><div class="bar"><span class="tgt">plain</span><span class="mime">text/plain</span></div><div class="sheet"><pre class="raw" id="outTxt"></pre></div></div>
-    <div class="proof"><div class="bar"><span class="tgt">tree</span><span class="mime">application/json</span></div><div class="sheet"><pre class="raw" id="outJson"></pre></div></div>
-  </section>
-</main>
+    <section class="proofs" aria-label="Compilation proofs">
+      <div class="proof">
+        <div class="bar"><span class="tgt">html</span><span class="mime">text/html</span></div>
+        <div class="sheet htmlview" id="outHtml"></div>
+      </div>
+      <div class="proof">
+        <div class="bar"><span class="tgt">markdown</span><span class="mime">text/markdown</span></div>
+        <div class="sheet">
+          <pre class="raw" id="outMd"></pre>
+        </div>
+      </div>
+      <div class="proof">
+        <div class="bar"><span class="tgt">plain</span><span class="mime">text/plain</span></div>
+        <div class="sheet">
+          <pre class="raw" id="outTxt"></pre>
+        </div>
+      </div>
+      <!-- <div class="proof"><div class="bar"><span class="tgt">tree</span><span class="mime">application/json</span></div><div class="sheet"><pre class="raw" id="outJson"></pre></div></div> -->
+    </section>
+  </main>
 
-<script type="module">
-import { renderAll, defineTerm, terms, escapeHtml } from './fragment.js';
+  <script type="module">
+    import { renderAll, defineTerm, terms, escapeHtml } from './fragment.js';
 
-const $ = id => document.getElementById(id);
-const src = $('src'), defineCard = $('defineCard');
-let pendingTerm = null;
+    const $ = id => document.getElementById(id);
+    const src = $('src'), defineCard = $('defineCard');
+    let pendingTerm = null;
 
-function colorJson(s){
-  return escapeHtml(s)
-    .replace(/&quot;([^&]*?)&quot;(\s*:)/g,'<span class="j-k">&quot;$1&quot;</span>$2')
-    .replace(/:\s*&quot;([^&]*?)&quot;/g,': <span class="j-s">&quot;$1&quot;</span>');
-}
+    function colorJson(s) {
+      return escapeHtml(s)
+        .replace(/&quot;([^&]*?)&quot;(\s*:)/g, '<span class="j-k">&quot;$1&quot;</span>$2')
+        .replace(/:\s*&quot;([^&]*?)&quot;/g, ': <span class="j-s">&quot;$1&quot;</span>');
+    }
 
-function renderSchema(){
-  $('termList').innerHTML = Object.entries(terms()).map(([k,v]) =>
-    `<div class="term"><span class="name">#${k}</span><span class="exp">${
-      v.kind==='kernel' ? 'kernel · '+escapeHtml(v.desc) : '→ '+escapeHtml(v.expand ?? '(fn)')}</span></div>`).join('');
-}
+    function renderSchema() {
+      $('termList').innerHTML = Object.entries(terms()).map(([k, v]) =>
+        `<div class="term"><span class="name">#${k}</span><span class="exp">${v.kind === 'kernel' ? 'kernel · ' + escapeHtml(v.desc) : '→ ' + escapeHtml(v.expand ?? '(fn)')}</span></div>`).join('');
+    }
 
-function recompile(){
-  const out = renderAll(src.value);
-  $('outHtml').innerHTML = out.html;
-  $('outMd').textContent = out.md;
-  $('outTxt').textContent = out.txt;
-  $('outJson').innerHTML = colorJson(out.json);
-  if (out.unknown.size && !defineCard.classList.contains('show')) promptDefine([...out.unknown][0]);
-  if (!out.unknown.size){ defineCard.classList.remove('show'); pendingTerm = null; }
-}
+    function recompile() {
+      const out = renderAll(src.value);
+      $('outHtml').innerHTML = out.html;
+      $('outMd').textContent = out.md;
+      $('outTxt').textContent = out.txt;
+      // $('outJson').innerHTML = colorJson(out.json);
+      if (out.unknown.size && !defineCard.classList.contains('show')) promptDefine([...out.unknown][0]);
+      if (!out.unknown.size) { defineCard.classList.remove('show'); pendingTerm = null; }
+    }
 
-function promptDefine(name){
-  pendingTerm = name;
-  $('defName').textContent = '#'+name;
-  $('defExp').value = '';
-  defineCard.classList.add('show');
-}
-$('defSave').onclick = () => {
-  const exp = $('defExp').value.trim();
-  if (!exp || !pendingTerm) return;
-  defineTerm(pendingTerm, { desc:'user-defined', expand: exp });
-  defineCard.classList.remove('show'); pendingTerm = null;
-  renderSchema(); recompile();
-};
-$('defSkip').onclick = () => { defineCard.classList.remove('show'); pendingTerm = null; };
+    function promptDefine(name) {
+      pendingTerm = name;
+      $('defName').textContent = '#' + name;
+      $('defExp').value = '';
+      defineCard.classList.add('show');
+    }
+    $('defSave').onclick = () => {
+      const exp = $('defExp').value.trim();
+      if (!exp || !pendingTerm) return;
+      defineTerm(pendingTerm, { desc: 'user-defined', expand: exp });
+      defineCard.classList.remove('show'); pendingTerm = null;
+      renderSchema(); recompile();
+    };
+    $('defSkip').onclick = () => { defineCard.classList.remove('show'); pendingTerm = null; };
 
-src.addEventListener('input', recompile);
-renderSchema(); recompile();
-</script>
+    src.addEventListener('input', recompile);
+    renderSchema(); recompile();
+  </script>
 </body>
+
 </html>
