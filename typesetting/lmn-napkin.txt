@@ -1,0 +1,197 @@
+# Essence
+
+Pheno is empty.
+
+A text file has a similar emptiness. Not an interpreted language, it has no meaning without an interpreter.
+
+The simplest interpreter is the identity function. To see the emptiness for what it is. (cat ; reading the source code; etc)
+
+It's the role of the author to make their play with emptiness well understood under many interpretations.
+
+# Identity
+
+`cat file.txt` uses a shell to take the source text as standard input and write it as-is to standard output.
+
+Cat is not Pheno. If we stopped here we would have a text file, so it must be more subtle, nya.
+
+Pheno intends for empty to remain empty. So interpreting this file properly would mean nothing has read stdin or written stdout. 
+
+To go beyond "text file that you cat" towards "Pheno program that you interpret" we must designate ways to disturb the void.
+
+# Delusion
+
+Disturbing the void introduces delusion. Interpreters will begin to behave differently from each other.
+
+Every disturbance we allow reduces the purity of simply writing what we think. And freely writing can mean more than we often think.
+
+For example, we may imagine that there is stdin and stdout. But this is not always available. The value of empty writing is that any
+file interpreter can present the literal content to a reader, and the reader interprets it using their mind.
+
+I can write `1 + 1` and you can imagine 2. I never needed to know your operating system to get this far.
+
+But if I write a bash script and you interpret it in a web browser or a CLI, we get different results.
+
+Less delusion means more reliance on the essence of emptiness - readable source code.
+
+````pheno
+```pheno python
+print("play with the void")
+```
+````
+
+# Dependent Arising
+
+Thought takes many forms in computation
+
+```
+program stdin => stdout
+handler request => response
+handler event => io
+function (a,b) => b
+arrow world => mind => body
+```
+
+Thought depends on data and becomes data
+
+```
+[1,2,3]
+{"x": 1}
+let y = 2;
+```
+
+The data itself depended on something to exist. Nothing came to exist without a cause.
+
+The focus of computing in Pheno is this process of arising based on its dependencies.
+
+With our void so far, we have no dependencies, and write only emptiness.
+
+# Computer Root
+
+For anything to arise, Pheno needs a computer root.
+
+The Pheno root should be a standardized kernel but allows a motivated user to change it to suit their needs.
+
+Somewhere between examples below. And in fact, ideally it could be used like a shell or notebook to bridge computation
+across multiple virtual computers.
+
+## Bash
+
+As an example, bash defines a programming language on top of the underlying operating system.
+
+> Bash uses hash tables to store and retrieve shell variables, and linked lists of these hash tables to implement variable scoping. There are different variable scopes for shell function calls and temporary scopes for variables set by assignment statements preceding a command. When those assignment statements precede a command that is built into the shell, for instance, the shell has to keep track of the correct order in which to resolve variable references, and the linked scopes allow bash to do that. There can be a surprising number of scopes to traverse depending on the execution nesting level.
+
+> As you read further, keep in mind that the shell implements its features using only a few data structures: arrays, trees, singly-linked and doubly-linked lists, and hash tables. Nearly all of the shell constructs are implemented using these primitives.
+
+> One historical problem with the shell, as Tom Duff said in his paper about rc, the Plan 9 shell, is that nobody really knows what the Bourne shell grammar is. The Posix shell committee deserves significant credit for finally publishing a definitive grammar for a Unix shell, albeit one that has plenty of context dependencies. That grammar isn't without its problems—it disallows some constructs that historical Bourne shell parsers have accepted without error—but it's the best we have.
+
+> In any event, the lexical analyzer takes lines of input from readline or another source, breaks them into tokens at metacharacters, identifies the tokens based on context, and passes them on to the parser to be assembled into statements and commands. There is a lot of context involved—for instance, the word for can be a reserved word, an identifier, part of an assignment statement, or other word, and the following is a perfectly valid command:  
+> `for for in for; do for=for; done; echo $for`  
+> that displays for.
+
+## UXN + Varvara
+
+As an example, https://wiki.xxiivv.com/site/varvara.html defines a computer system for audio visual programs.
+
+```md
+- Devices are external systems connected to Uxn, such as the screen, the mouse and the keyboard. Each device has 16 bytes of addressable memory in the device page, which are called ports.
+- Ports are addresses in the device page, some ports hold either the high or low bytes of a short, and will be presented below as a single port indicated like vector.
+- Vectors are ports holding an address in memory to evaluate when a device event is triggered, such as when the mouse is moved, or a key is pressed. Vector ports will be presented below with a colored background.
+- Banks are additional memory outside of addressable range accessible via the System/expansion port. Emulators are recommended to support 16 banks when possible, each bank contains 65536 bytes.
+
+Varvara
+00	system	80	controller
+10	console	90	mouse
+20	screen	a0	file
+30	audio   b0
+40	        c0	datetime
+50	        d0	Reserved
+60	        e0
+70          f0	
+
+System Device
+00	Unused*	    08	red*
+01              09
+02  expansion*	0a	green*
+03              0b
+04              0c	blue*
+05              0d
+06  metadata*   0e  debug
+07              0f  state
+
+
+Console Device
+10  vector* 18	write
+11          19	error
+12  read    1a	--
+13  --      1b	--
+14  --      1c	addr*
+15  --      1d
+16  --      1e	mode
+17  type    1f	exec
+```
+
+```uxntal
+( 54K . printf "ghi" | uxncli console.rom "abc" "def" )
+
+|00 @System/vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
+|10 @Console/vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
+|20 @Screen/vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+|80 @Controller/vector $2 &button $1 &key $1
+|90 @Mouse/vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
+|a0 @File/vector $2 &success $1 &success-lb $1 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
+|c0 @DateTime &year $2 &month $1 &day $1 &hour $1 &minute $1 &second $1 &dotw $1 &doty $2 &isdst $1
+|0050 @Varvara/version
+
+|100
+
+@on-reset ( -> )
+	;meta #06 DEO2
+	;on-console .Console/vector DEO2
+	BRK
+
+@meta 00
+	( name ) "Console 20 "Device 20 "Test(80K) 0a
+	( details ) "Testing 20 "Program 0a
+	( author ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
+	( date ) "24 20 "Jun 20 "2026 00
+	( . ) 01
+	( - ) 56 =Varvara/version
+
+@on-console ( -> )
+	.Console/type DEI .Console/read DEI
+	( inc ) [ LIT2 &ptr =expect ] INC2k INC2 ,&ptr STR2
+	DUP2 ;expect/end EQU2 ?pass
+	LDA2 NEQ2 ?fail
+	BRK
+
+@fail ( -> )
+	;dict/fail str/<print>
+	#010f DEO
+	BRK
+
+@pass ( type read ptr* -> )
+	POP2 POP2 ;dict/pass str/<print>
+	#800f DEO
+	BRK
+
+(
+@|Utils )
+
+@str/<print> ( str* -- )
+	LDAk DUP ?{ POP POP2 JMP2r }
+	#18 DEO
+	INC2 !/<print>
+
+(
+@|Data )
+
+@expect [
+	02 "a 02 "b 02 "c 03 0a 02 "d 02 "e 02 "f 04 0a
+	01 "g 01 "h 01 "i ]
+	&end [ 04 0a ]
+
+@dict
+	&pass "Console: 20 "pass 0a $1
+	&fail "Console: 20 "fail 0a $1
+
+```

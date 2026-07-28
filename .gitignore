@@ -2,3 +2,7 @@
 .env*
 *.lock
 *.zip
+
+# Added by cargo
+
+/target

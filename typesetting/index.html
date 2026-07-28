@@ -120,114 +120,6 @@
       border-radius: 3px
     }
 
-    .define {
-      border: 1px dashed var(--blue);
-      background: var(--blue-wash);
-      border-radius: 6px;
-      padding: 14px;
-      display: none
-    }
-
-    .define.show {
-      display: block
-    }
-
-    .define p {
-      font-size: 13px;
-      margin-bottom: 8px
-    }
-
-    .define p code {
-      font-family: var(--mono);
-      font-weight: 700;
-      color: var(--blue-ink)
-    }
-
-    .define input {
-      width: 100%;
-      font-family: var(--mono);
-      font-size: 12.5px;
-      padding: 8px 10px;
-      border: 1px solid var(--blue);
-      border-radius: 4px;
-      margin-bottom: 8px;
-      background: #fff
-    }
-
-    .define input:focus {
-      outline: 2px solid var(--blue-ink);
-      outline-offset: 1px
-    }
-
-    .define .drow {
-      display: flex;
-      gap: 8px
-    }
-
-    .define button {
-      font-size: 12.5px;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 4px;
-      border: 1px solid var(--blue-ink);
-      cursor: pointer;
-      background: var(--blue-ink);
-      color: #fff
-    }
-
-    .define button.ghost {
-      background: transparent;
-      color: var(--blue-ink)
-    }
-
-    .define .dhint {
-      font-size: 11.5px;
-      color: var(--blue-ink);
-      margin-top: 6px
-    }
-
-    .schema {
-      border: 1px solid var(--rule);
-      border-radius: 6px;
-      background: #fff
-    }
-
-    .schema summary {
-      cursor: pointer;
-      padding: 10px 14px;
-      font-size: 12px;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: var(--faint);
-      font-weight: 600;
-      user-select: none
-    }
-
-    .schema .terms {
-      padding: 4px 14px 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px
-    }
-
-    .schema .term {
-      font-family: var(--mono);
-      font-size: 12px;
-      display: flex;
-      gap: 10px;
-      align-items: baseline
-    }
-
-    .schema .term .name {
-      color: var(--blue-ink);
-      font-weight: 700;
-      min-width: 110px
-    }
-
-    .schema .term .exp {
-      color: var(--faint)
-    }
-
     .proofs {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -514,7 +406,7 @@
   <main>
     <section class="composer">
       <span class="label">Fragment source</span>
-      <textarea id="src" spellcheck="false" aria-label="Fragment source">#title: IR design notes
+      <textarea id="src" spellcheck="false" aria-label="Fragment source">#title[IR design notes]
 
 Went down a rabbit hole on IR design today. The trick is making degradation a structural guarantee, not a hope.
 
@@ -525,49 +417,29 @@ Went down a rabbit hole on IR design today. The trick is making degradation a st
 #quote[Everything is a fragment; the resource is just the root node of the request.]
 
 The tiers so far: #list[
-  #item: html keeps full semantics
-  #item: markdown keeps structure
-  #item: plaintext keeps meaning
+  #item[html keeps full semantics]
+  #item[markdown keeps structure]
+  #item[plaintext keeps meaning]
 ]
 
-#table:
- #row(header):
-  #cell[target]
-  #cell[mime]
- #row: #cell[html]     #cell[text/html]
- #row: #cell[markdown] #cell[text/markdown]
- #row: #cell[plain]    #cell[text/plain]
+#table[
+ #row(header)[#cell[target] #cell[mime]]
+ #row[#cell[html] #cell[text/html]]
+ #row[#cell[markdown] #cell[text/markdown]]
+ #row[#cell[plain] #cell[text/plain]]
+]
 
-#section: Typesetting
+#section[Typesetting]
 
 Prose wraps to the measure in plaintext and markdown; html gets max-width. Escaping the flow entirely:
 
-#codeblock(js):
- const { tree } = compile(src);
- render(tree, 'txt', { width: 72 });
+#codeblock(js)[const out = renderAll(src); out.txt;]
 
 #rule
 
-#center: — fin —</textarea>
+#center[— fin —]</textarea>
       <div class="hint">plain prose, blank lines split paragraphs · escape into structure with
-        <code>#term[content]</code> or <code>#term(arg)[content]</code> · colon sugar: <code>#term: rest of line</code>,
-        or <code>#term:</code> alone taking the indented lines below · unknown terms prompt a definition</div>
-
-      <div class="define" id="defineCard" role="region" aria-live="polite">
-        <p>unknown term <code id="defName">#x</code> — define its expansion:</p>
-        <input id="defExp" placeholder="e.g.  quote[NOTE: {content}]" aria-label="Expansion template">
-        <div class="drow">
-          <button id="defSave">Define term</button>
-          <button class="ghost" id="defSkip">Leave undefined</button>
-        </div>
-        <div class="dhint">use <b>{content}</b> for the body and <b>{1}</b>, <b>{2}</b>… for args. Macros expand into
-          kernel terms, so every target renders them for free.</div>
-      </div>
-
-      <details class="schema" open>
-        <summary>Schema — registered terms</summary>
-        <div class="terms" id="termList"></div>
-      </details>
+        <code>#term[content]</code> or <code>#term(arg)[content]</code> · unknown terms are marked safely</div>
     </section>
 
     <section class="proofs" aria-label="Compilation proofs">
@@ -592,50 +464,20 @@ Prose wraps to the measure in plaintext and markdown; html gets max-width. Escap
   </main>
 
   <script type="module">
-    import { renderAll, defineTerm, terms, escapeHtml } from './fragment.js';
+    import { renderAll } from './fragment.js';
 
     const $ = id => document.getElementById(id);
-    const src = $('src'), defineCard = $('defineCard');
-    let pendingTerm = null;
-
-    function colorJson(s) {
-      return escapeHtml(s)
-        .replace(/&quot;([^&]*?)&quot;(\s*:)/g, '<span class="j-k">&quot;$1&quot;</span>$2')
-        .replace(/:\s*&quot;([^&]*?)&quot;/g, ': <span class="j-s">&quot;$1&quot;</span>');
-    }
-
-    function renderSchema() {
-      $('termList').innerHTML = Object.entries(terms()).map(([k, v]) =>
-        `<div class="term"><span class="name">#${k}</span><span class="exp">${v.kind === 'kernel' ? 'kernel · ' + escapeHtml(v.desc) : '→ ' + escapeHtml(v.expand ?? '(fn)')}</span></div>`).join('');
-    }
+    const src = $('src');
 
     function recompile() {
       const out = renderAll(src.value);
       $('outHtml').innerHTML = out.html;
       $('outMd').textContent = out.md;
       $('outTxt').textContent = out.txt;
-      // $('outJson').innerHTML = colorJson(out.json);
-      if (out.unknown.size && !defineCard.classList.contains('show')) promptDefine([...out.unknown][0]);
-      if (!out.unknown.size) { defineCard.classList.remove('show'); pendingTerm = null; }
     }
-
-    function promptDefine(name) {
-      pendingTerm = name;
-      $('defName').textContent = '#' + name;
-      $('defExp').value = '';
-      defineCard.classList.add('show');
-    }
-    $('defSave').onclick = () => {
-      const exp = $('defExp').value.trim();
-      if (!exp || !pendingTerm) return;
-      defineTerm(pendingTerm, { desc: 'user-defined', expand: exp });
-      defineCard.classList.remove('show'); pendingTerm = null;
-      renderSchema(); recompile();
-    };
-    $('defSkip').onclick = () => { defineCard.classList.remove('show'); pendingTerm = null; };
 
     src.addEventListener('input', recompile);
-    renderSchema(); recompile();
+    recompile();
   </script>
 </body>
 

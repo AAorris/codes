@@ -1,8 +1,18 @@
-FROM golang:1.26-alpine AS build
+FROM rust:1.90 AS build
+
+RUN rustup target add x86_64-unknown-linux-musl
+
 WORKDIR /src
 COPY . .
-RUN go build -o /server main.go
 
-FROM alpine:3.22
-COPY --from=build /server /server
+RUN cargo build \
+    --release \
+    --target x86_64-unknown-linux-musl
+
+FROM scratch
+
+COPY --from=build \
+    /src/target/x86_64-unknown-linux-musl/release/server \
+    /server
+
 CMD ["/server"]

@@ -1,0 +1,186 @@
+HyperNap - Restful Hypertext typesetting language
+
+HyperNap is an authoring format designed for HTTP servers.
+
+- The core primitive is a request handling function
+- A request handler knows about the host, URI, headers, and so on
+- Each request is for a resource, or fragment of a resource
+- Resources can be protected, and the resource owner can author in authorization details
+- Content is written to produce responses in the requested format defined by Accept, ex. html, txt, md, json
+
+Consider some abstract text resource like
+
+```nap
+---
+slug: /
+name: my website
+auth: public
+---
+# greeting
+hello world
+## motd
+today is a day
+## now
+@[now](/now)
+```
+
+Waving our hands, we can imagine making requests against this resource
+
+GET / -Accept json
+
+```json
+{
+  "main": {
+    "greeting": "hello world",
+    "motd": "today is a day",
+    "now": ...
+  }
+}
+```
+
+GET /index.json#greeting -Accept json
+"hello world"
+
+REST conventions, like resource URI and fragments should be native to the authoring format. The format above is simply illustrative, and must be totally redefined below to satisfy other concerns.
+
+Consider typesetting a text document
+
+```tex
+% Common parameters
+\title{Your title}
+\author{You}
+\date{\today}
+% +++++++++++++++++++++++++++++++++++++++++++++ CONFIGURATION ++++++++++++++++++++++++++++++++++++++++
+% parameter for the print version (i.e. generate the blank pages)
+\def\printversion{true}
+% parameter to display appendices normally or simply the line in ToC
+%  NB: this is useful if you do not want to include the appendices into the text but you want to keep
+%       appendices lines in the ToC and also the labels for referencing
+\def\displayappendices{true}
+% ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\documentclass[16pt,a4paper,twoside,openright]{memoir}
+%\setulmarginsandblock{2.5cm}{2cm}{*}
+%\setlrmarginsandblock{1.5cm}{1.5cm}{*}
+\setulmarginsandblock{3cm}{3cm}{*}
+\setlrmarginsandblock{3cm}{3cm}{*}
+%\renewcommand*\familydefault{\sfdefault} % use this to change overall font
+\renewcommand*\familydefault{ppl}
+\checkandfixthelayout
+```
+
+Or styling an HTML document
+
+```html
+...
+<figcaption><a href="#figure-7" class="selfRef">Figure 7</a>:
+<a href="#name-example-of-authorization_details" class="selfRef">Example of "authorization_details" Using Common and Extension Data Fields</a>
+          </figcaption></figure>
+<p id="section-2.2-9">If this request is approved, the resulting access token's access rights will be
+the union of the requested types of access for each of the two APIs, just as above.<a href="#section-2.2-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="authz_request">
+<section id="section-3">
+      <h2 id="name-authorization-request">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-authorization-request" class="section-name selfRef">Authorization Request</a>
+      </h2>
+<p id="section-3-1">The <code>authorization_details</code> authorization request parameter can be used to specify authorization requirements in all places where the <code>scope</code> parameter is used for the same purpose, examples include:<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3-2.1">authorization requests as specified in <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span><a href="#section-3-2.1" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-3-2.2">device authorization requests as specified in <span>[<a href="#RFC8628" class="cite xref">RFC8628</a>]</span><a href="#section-3-2.2" class="pilcrow">¶</a>
+</li>
+        <li class="normal" id="section-3-2.3">backchannel authentication requests as defined in <span>[<a href="#OID-CIBA" class="cite xref">OID-CIBA</a>]</span><a href="#section-3-2.3" class="pilcrow">¶</a>
+</li>
+      </ul>
+<p id="section-3-3">In case of authorization requests as defined in <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, implementers <span class="bcp14">MAY</span> consider using pushed authorization requests <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> to improve the security, privacy, and reliability of the flow. See Sections <a href="#security_considerations" class="auto internal xref">12</a>, <a href="#privacy_considerations" class="auto internal xref">13</a>, and <a href="#large_requests" class="auto internal xref">11.4</a> for details.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">Parameter encoding is determined by the respective context. In the context of an authorization request according to <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, the parameter is encoded using the <code>application/x-www-form-urlencoded</code> format of the serialized JSON as shown in <a href="#fig8" class="auto internal xref">Figure 8</a>, using the example from <a href="#authz_details" class="auto internal xref">Section 2</a> (line breaks for display purposes only):<a href="#section-3-4" class="pilcrow">¶</a></p>
+<span id="name-example-of-authorization-re"></span><div id="fig8">
+        <div class="lang-http-message sourcecode" id="section-3-5.1">
+<pre>
+GET /authorize?response_type=code
+   &amp;client_id=s6BhdRkqt3
+   &amp;state=af0ifjsldkj
+   &amp;redirect_uri=https%3A%2F%2Fclient.example.org%2Fcb
+   &amp;code_challenge_method=S256
+   &amp;code_challenge=K2-ltc83acc4h0c9w6ESC_rEMTJ3bwc-uCHaoeK1t8U
+   &amp;authorization_details=%5B%7B%22type%22%3A%22account%5Finfo
+   rmation%22%2C%22actions%22%3A%5B%22list%5Faccounts%22%2C%22
+   read%5Fbalances%22%2C%22read%5Ftransactions%22%5D%2C%22loca
+   tions%22%3A%5B%22https%3A%2F%2Fexample%2Ecom%2Faccounts%22%
+   5D%7D%2C%7B%22type%22%3A%22payment%5Finitiation%22%2C%22act
+   ions%22%3A%5B%22initiate%22%2C%22status%22%2C%22cancel%22%5
+   D%2C%22locations%22%3A%5B%22https%3A%2F%2Fexample%2Ecom%2Fp
+   ayments%22%5D%2C%22instructedAmount%22%3A%7B%22currency%22%
+   3A%22EUR%22%2C%22amount%22%3A%22123%2E50%22%7D%2C%22credito
+   rName%22%3A%22Merchant%20A%22%2C%22creditorAccount%22%3A%7B
+   %22iban%22%3A%22DE02100100109307118603%22%7D%2C%22remittanc
+   eInformationUnstructured%22%3A%22Ref%20Number%20Merchant%22
+   %7D%5D HTTP/1.1
+Host: server.example.com
+</pre>
+...
+```
+
+And consider ietf rfchtml
+
+```txt
+Internet Engineering Task Force (IETF)                    T. Lodderstedt
+Request for Comments: 9396                                       yes.com
+Category: Standards Track                                      J. Richer
+ISSN: 2070-1721                                      Bespoke Engineering
+                                                             B. Campbell
+                                                           Ping Identity
+                                                                May 2023
+
+
+                 OAuth 2.0 Rich Authorization Requests
+
+Abstract
+
+   This document specifies a new parameter authorization_details that is
+   used to carry fine-grained authorization data in OAuth messages.
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+   This document is a product of the Internet Engineering Task Force
+   (IETF).  It represents the consensus of the IETF community.  It has
+   received public review and has been approved for publication by the
+   Internet Engineering Steering Group (IESG).  Further information on
+   Internet Standards is available in Section 2 of RFC 7841.
+
+   Information about the current status of this document, any errata,
+   and how to provide feedback on it may be obtained at
+   https://www.rfc-editor.org/info/rfc9396.
+
+Copyright Notice
+
+   Copyright (c) 2023 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Revised BSD License text as described in Section 4.e of the
+   Trust Legal Provisions and are provided without warranty as described
+   in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+     1.1.  Conventions and Terminology
+   2.  Request Parameter "authorization_details"
+     2.1.  Authorization Details Types
+     2.2.  Common Data Fields
+   3.  Authorization Request
+     3.1.  Relationship to the "scope" Parameter
+```
+
+Nap would have a set of domain primitives that map to each
