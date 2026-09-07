@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" baseProfile="full" version="1.1" width="24" height="24"
+  viewBox="30 45 230 230" style="fill:none;stroke:var(--foreground);stroke-width:28px;stroke-linecap:square;filter:blur(0px)">
+  <title>Webring</title>
+  <g transform="translate(0,30)">
+    <g transform="translate(150,150),rotate(120,0,0)">
+      <path d="M0,-60 a60,60 0 1,0 0,120 l100,0"></path>
+    </g>
+    <g transform="translate(150,150),rotate(240,0,0)">
+      <path d="M0,-60 a60,60 0 1,0 0,120 l100,0"></path>
+    </g>
+    <g transform="translate(150,150),rotate(0,0,0)">
+      <path d="M0,-60 a60,60 0 1,0 0,120 l100,0"></path>
+    </g>
+  </g>
+</svg>

@@ -15,4 +15,13 @@ COPY --from=build \
     /src/target/x86_64-unknown-linux-musl/release/server \
     /server
 
+WORKDIR /site
+
+COPY functions/ /site/functions/
+COPY dev/ /site/dev/
+
+ENV RES_ROOT=/site
+
+EXPOSE 80
+
 CMD ["/server"]

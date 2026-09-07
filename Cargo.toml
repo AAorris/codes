@@ -3,20 +3,9 @@ name = "dockersite"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-tokio = { version = "1", features = ["full"] }
-
-hyper = { version = "1", features = ["server", "http1"] }
-
-hyper-util = { version = "0.1", features = ["tokio"] }
-
-http-body-util = "0.1"
-
-bytes = "1"
-
 [[bin]]
-name = "dockersite"
-path = "src/main.rs"
+name = "server"
+path = "kernel/main.rs"
 
 [profile.release]
 opt-level = "z"

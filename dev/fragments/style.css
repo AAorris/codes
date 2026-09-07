@@ -1,0 +1,168 @@
+/* Presentation tokens and patterns, derived from the tailwind reference:
+   min-h-screen px-6 py-16 sm:px-10 | mx-auto max-w-xl text-left space-y-10
+   text-lg font-normal tracking-tight | text-[var(--muted)]
+   mb-3 | list-[square] pl-4 marker:text-[var(--muted)]
+   flex gap-2 mt-10 */
+
+:root {
+  --foreground: #171717;
+  --muted: #737373;
+  --background: #ffffff;
+  --width: 36rem;
+  /* max-w-xl */
+  --space-section: 2.5rem;
+  /* space-y-10, mt-10 */
+  --space-item: 0.5rem;
+  /* gap-2 */
+  --space-label: 0.75rem;
+  /* mb-3 */
+  --pad-x: 1.5rem;
+  /* px-6 */
+  --pad-y: 4rem;
+  /* py-16 */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: var(--pad-y) var(--pad-x);
+  background: var(--background);
+  color: var(--foreground);
+  font: 400 14px/1.75 "Geist Mono", "Geist", ui-monospace, monospace;
+}
+
+@media (min-width: 640px) {
+  body {
+    padding-left: 2.5rem;
+    /* sm:px-10 */
+    padding-right: 2.5rem;
+  }
+}
+
+main,
+footer {
+  max-width: var(--width);
+  margin-inline: auto;
+  text-align: left;
+}
+
+main {
+  display: grid;
+  gap: var(--space-section);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  /* text-lg */
+  font-weight: 400;
+  /* font-normal */
+  letter-spacing: -0.025em;
+  /* tracking-tight */
+  color: var(--foreground);
+}
+
+h1>a {
+  text-decoration: none;
+  color: var(--foreground);
+}
+
+h2 {
+  margin: 0 0 var(--space-label);
+  font-size: inherit;
+  font-weight: 600;
+}
+
+header p,
+footer p {
+  margin: 0;
+  color: var(--muted);
+}
+
+ul {
+  margin: 0;
+  padding-left: 2ch;
+  /* pl-4 */
+  list-style: square;
+  /* list-[square] */
+}
+
+li {
+  color: var(--foreground);
+}
+
+li::marker {
+  color: var(--muted);
+  /* marker:text-[var(--muted)] */
+}
+
+li {
+  display: flex;
+  justify-content: space-between;
+}
+
+.lir {
+  color: var(--muted);
+}
+
+blockquote {
+  margin: 0;
+  white-space: pre-line;
+  padding-left: 2ch;
+}
+
+.crumb a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.crumb a:hover {
+  text-decoration: underline;
+}
+
+.meditations li {
+  display: list-item;
+}
+
+.meditations a {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.meditations a:hover {
+  text-decoration: underline;
+}
+
+footer {
+  display: flex;
+  /* flex */
+  gap: var(--space-item);
+  /* gap-2 */
+  margin-top: var(--space-section);
+  /* mt-10 */
+}
+
+footer a {
+  display: block;
+  color: inherit;
+}
+
+footer svg {
+  display: block;
+}
+
+table {
+  border: 1px solid var(--muted);
+}
+
+td {
+  padding: 2px 1ch;
+}
+
+thead {
+  font-weight: 600;
+}
