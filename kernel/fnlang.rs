@@ -31,16 +31,16 @@
 //!
 //! `#` begins a line comment. Strings support `\n`, `\t`, `\\`, and `\"`.
 
-use std::fs;
-
-use crate::res;
+use crate::res::{self, Snapshot};
 
 pub const TEMPLATE_PLACEHOLDER: &str = "{{body}}";
 
-/// Request values visible to a function through the `ctx` word.
+/// Request values visible to a function through the `ctx` word, plus the
+/// content snapshot every word reads from.
 pub struct Ctx {
     pub method: String,
     pub path: String,
+    pub src: Snapshot,
 }
 
 /// Response state produced by one function-language program.
@@ -121,11 +121,11 @@ pub fn run(source: &str, ctx: &Ctx, default_status: u16) -> Result<Out, String> 
                 "load" => {
                     let name = string_arg(&tokens, i + 1, "load")?;
                     i += 1;
-                    match load_fragment(&name) {
+                    match load_fragment(&ctx.src, &name) {
                         Some(fragment) => stack.push(fragment),
                         None => stack.push(format!(
                             "<!-- missing fragment {}/{}.html -->",
-                            res::fragments_dir(),
+                            res::FRAGMENTS,
                             name
                         )),
                     }
@@ -147,7 +147,7 @@ pub fn run(source: &str, ctx: &Ctx, default_status: u16) -> Result<Out, String> 
                     if !valid_dir(&dir) {
                         return Err(format!("resources: bad dir \"{dir}\""));
                     }
-                    stack.push(list_resources(&dir, &base));
+                    stack.push(list_resources(&ctx.src, &dir, &base));
                 }
                 "resource" => {
                     let dir = string_arg(&tokens, i + 1, "resource")?;
@@ -156,7 +156,7 @@ pub fn run(source: &str, ctx: &Ctx, default_status: u16) -> Result<Out, String> 
                     if !valid_dir(&dir) {
                         return Err(format!("resource: bad dir \"{dir}\""));
                     }
-                    stack.push(load_resource(&dir, &base, &ctx.path, &mut out.status));
+                    stack.push(load_resource(&ctx.src, &dir, &base, &ctx.path, &mut out.status));
                 }
 
                 // Stack transforms.
@@ -167,15 +167,15 @@ pub fn run(source: &str, ctx: &Ctx, default_status: u16) -> Result<Out, String> 
                         Some(content) => content,
                         None => return Err("template: empty stack".to_string()),
                     };
-                    match fs::read_to_string(format!("{}/{}.html", res::templates_dir(), name)) {
-                        Ok(template) => {
+                    match ctx.src.read(&format!("{}/{}.html", res::TEMPLATES, name)) {
+                        Some(template) => {
                             let page = template.replacen(TEMPLATE_PLACEHOLDER, &content, 1);
-                            stack.push(include_fragments(&page));
+                            stack.push(include_fragments(&ctx.src, &page));
                         }
-                        Err(_) => {
+                        None => {
                             return Err(format!(
                                 "template: missing {}/{}.html",
-                                res::templates_dir(),
+                                res::TEMPLATES,
                                 name
                             ));
                         }
@@ -215,7 +215,7 @@ fn string_arg(tokens: &[Token], index: usize, word: &str) -> Result<String, Stri
 
 // Fragment and template support.
 
-fn include_fragments(page: &str) -> String {
+fn include_fragments(src: &Snapshot, page: &str) -> String {
     let mut out = String::with_capacity(page.len());
     let mut rest = page;
     while let Some(start) = rest.find("{{") {
@@ -224,7 +224,7 @@ fn include_fragments(page: &str) -> String {
         match after.find("}}") {
             Some(end) => {
                 let name = &after[..end];
-                out.push_str(&read_fragment(name));
+                out.push_str(&read_fragment(src, name));
                 rest = &after[end + 2..];
             }
             None => {
@@ -237,15 +237,13 @@ fn include_fragments(page: &str) -> String {
     out
 }
 
-fn load_fragment(name: &str) -> Option<String> {
+fn load_fragment(src: &Snapshot, name: &str) -> Option<String> {
     if !valid_fragment_path(name) {
         return None;
     }
-    let base = res::fragments_dir();
-    match fs::read_to_string(format!("{base}/{name}.html")) {
-        Ok(fragment) => Some(fragment),
-        Err(_) => fs::read_to_string(format!("{base}/{name}/index.html")).ok(),
-    }
+    let base = res::FRAGMENTS;
+    src.read(&format!("{base}/{name}.html"))
+        .or_else(|| src.read(&format!("{base}/{name}/index.html")))
 }
 
 fn valid_fragment_path(name: &str) -> bool {
@@ -256,7 +254,7 @@ fn valid_fragment_path(name: &str) -> bool {
         && name.split('/').all(valid_slug)
 }
 
-fn read_fragment(name: &str) -> String {
+fn read_fragment(src: &Snapshot, name: &str) -> String {
     let stem = name
         .strip_suffix(".css")
         .or_else(|| name.strip_suffix(".svg"));
@@ -264,14 +262,8 @@ fn read_fragment(name: &str) -> String {
     if !includable {
         return format!("<!-- bad fragment include {{{{{name}}}}} -->");
     }
-    match fs::read_to_string(format!("{}/{}", res::fragments_dir(), name)) {
-        Ok(fragment) => fragment,
-        Err(_) => format!(
-            "<!-- missing fragment {}/{} -->",
-            res::fragments_dir(),
-            name
-        ),
-    }
+    src.read(&format!("{}/{}", res::FRAGMENTS, name))
+        .unwrap_or_else(|| format!("<!-- missing fragment {}/{} -->", res::FRAGMENTS, name))
 }
 
 // Route pattern support.
@@ -331,11 +323,11 @@ fn escape_html(text: &str) -> String {
 }
 
 fn resource_path(dir: &str, slug: &str) -> String {
-    format!("{}/{dir}/{slug}.html", res::fragments_dir())
+    format!("{}/{dir}/{slug}.html", res::FRAGMENTS)
 }
 
-fn resource_title(dir: &str, slug: &str) -> Option<String> {
-    let content = fs::read_to_string(resource_path(dir, slug)).ok()?;
+fn resource_title(src: &Snapshot, dir: &str, slug: &str) -> Option<String> {
+    let content = src.read(&resource_path(dir, slug))?;
     for tag in ["h1", "h2", "h3"] {
         let open = format!("<{tag}");
         let Some(start) = content.find(&open) else {
@@ -357,22 +349,18 @@ fn resource_title(dir: &str, slug: &str) -> Option<String> {
     None
 }
 
-fn list_resources(dir: &str, base: &str) -> String {
-    let mut slugs: Vec<String> = fs::read_dir(format!("{}/{}", res::fragments_dir(), dir))
-        .map(|entries| {
-            entries
-                .filter_map(|entry| entry.ok())
-                .filter_map(|entry| entry.file_name().into_string().ok())
-                .filter(|name| name.ends_with(".html"))
-                .map(|name| name.trim_end_matches(".html").to_string())
-                .filter(|slug| valid_slug(slug))
-                .collect()
-        })
-        .unwrap_or_default();
+fn list_resources(src: &Snapshot, dir: &str, base: &str) -> String {
+    let mut slugs: Vec<String> = src
+        .list(&format!("{}/{}", res::FRAGMENTS, dir))
+        .into_iter()
+        .filter(|name| name.ends_with(".html"))
+        .map(|name| name.trim_end_matches(".html").to_string())
+        .filter(|slug| valid_slug(slug))
+        .collect();
     slugs.sort();
     let mut out = String::new();
     for slug in slugs {
-        let title = resource_title(dir, &slug).unwrap_or_else(|| slug.clone());
+        let title = resource_title(src, dir, &slug).unwrap_or_else(|| slug.clone());
         out.push_str(&format!(
             "<li><a href=\"{}{}\">{}</a></li>\n",
             escape_html(base),
@@ -383,16 +371,16 @@ fn list_resources(dir: &str, base: &str) -> String {
     out
 }
 
-fn load_resource(dir: &str, base: &str, path: &str, status: &mut u16) -> String {
+fn load_resource(src: &Snapshot, dir: &str, base: &str, path: &str, status: &mut u16) -> String {
     if let Some(slug) = path.strip_prefix(base)
         && valid_slug(slug)
-        && let Ok(content) = fs::read_to_string(resource_path(dir, slug))
+        && let Some(content) = src.read(&resource_path(dir, slug))
     {
         return content;
     }
     *status = 404;
-    fs::read_to_string(format!("{}/404.html", res::fragments_dir()))
-        .unwrap_or_else(|_| "<p>not found.</p>".to_string())
+    src.read(&format!("{}/404.html", res::FRAGMENTS))
+        .unwrap_or_else(|| "<p>not found.</p>".to_string())
 }
 
 // Source lexer. Keeping it last leaves the execution and file-domain helpers
@@ -459,6 +447,7 @@ mod tests {
         Ctx {
             method: method.to_string(),
             path: path.to_string(),
+            src: res::snapshot(None).0,
         }
     }
 

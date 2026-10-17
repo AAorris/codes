@@ -3,22 +3,21 @@
 //! The request pipeline is intentionally linear:
 //!
 //! ```text
-//! method + raw path
+//! method + raw path (+ x-archive-ref)
+//!   -> take one content snapshot (see res.rs)
 //!   -> normalize trailing slash
 //!   -> run functions/route.f
 //!   -> take its first emitted function name
 //!   -> run functions/<name>.f
-//!   -> add a default HTML content type
+//!   -> add a default HTML content type and x-archive-source/-etag headers
 //! ```
 //!
 //! No route selects `functions/404.f`. A selected function that fails while
 //! running produces a 500. If the function file chosen for this request is
 //! missing, the kernel returns a final plain-text 404.
 
-use std::fs;
-
 use crate::fnlang::{self, Ctx, Out};
-use crate::res;
+use crate::res::{self, Snapshot};
 
 const ROUTE_FUNCTION: &str = "route";
 const NOT_FOUND_FUNCTION: &str = "404";
@@ -45,27 +44,34 @@ impl Response {
 /// Paths are normalized before both stages, so `/meditation/` and
 /// `/meditation` have identical request context. `HEAD` handling is inherited
 /// from the language's `route` word, which compares it as `GET`.
-pub fn route(method: &str, path: &str) -> Response {
+/// `archive_ref` selects a ref archive on preview deployments.
+pub fn route(method: &str, path: &str, archive_ref: Option<&str>) -> Response {
+    let (src, origin) = res::snapshot(archive_ref);
     let path = normalize_path(path);
-    let target = resolve_route(method, &path);
+    let target = resolve_route(&src, method, &path);
     let (name, default_status) = match &target {
         Some(name) => (name.as_str(), 200),
         None => (NOT_FOUND_FUNCTION, 404),
     };
-    match interpret_function(name, method, &path, default_status) {
+    let mut response = match interpret_function(&src, name, method, &path, default_status) {
         Some(response) => response,
         None => fallback_not_found(&path),
+    };
+    // Verification reads these: without them a silent fallback would pass.
+    response
+        .headers
+        .push(("x-archive-source".to_string(), origin.source));
+    if let Some(etag) = origin.etag {
+        response.headers.push(("x-archive-etag".to_string(), etag));
     }
+    response
 }
 
 /// Load the hot-reloaded routing table, then evaluate it as ordinary fnlang.
-fn resolve_route(method: &str, path: &str) -> Option<String> {
-    let source = match fs::read_to_string(format!("{}/{ROUTE_FUNCTION}.f", res::functions_dir())) {
-        Ok(source) => source,
-        Err(err) => {
-            eprintln!("{ROUTE_FUNCTION}.f: unreadable: {err}");
-            return None;
-        }
+fn resolve_route(src: &Snapshot, method: &str, path: &str) -> Option<String> {
+    let Some(source) = src.read(&format!("{}/{ROUTE_FUNCTION}.f", res::FUNCTIONS)) else {
+        eprintln!("{ROUTE_FUNCTION}.f: unreadable");
+        return None;
     };
     match select_route(&source, method, path) {
         Ok(target) => target,
@@ -82,7 +88,8 @@ fn resolve_route(method: &str, path: &str) -> Option<String> {
 /// order the precedence rule and gives tests and future route sources a small,
 /// deterministic seam.
 fn select_route(source: &str, method: &str, path: &str) -> Result<Option<String>, String> {
-    let ctx = request_context(method, path);
+    // Route tables only emit names, so they see an empty content tree.
+    let ctx = request_context(Snapshot::Tree(Default::default()), method, path);
     let out = fnlang::run(source, &ctx, 200)?;
     Ok(out
         .body
@@ -94,16 +101,14 @@ fn select_route(source: &str, method: &str, path: &str) -> Result<Option<String>
 }
 
 fn interpret_function(
+    src: &Snapshot,
     name: &str,
     method: &str,
     path: &str,
     default_status: u16,
 ) -> Option<Response> {
-    let source = match fs::read_to_string(format!("{}/{}.f", res::functions_dir(), name)) {
-        Ok(source) => source,
-        Err(_) => return None,
-    };
-    let ctx = request_context(method, path);
+    let source = src.read(&format!("{}/{}.f", res::FUNCTIONS, name))?;
+    let ctx = request_context(src.clone(), method, path);
     Some(match fnlang::run(&source, &ctx, default_status) {
         Ok(out) => response_from_out(out),
         Err(err) => Response {
@@ -114,10 +119,11 @@ fn interpret_function(
     })
 }
 
-fn request_context(method: &str, path: &str) -> Ctx {
+fn request_context(src: Snapshot, method: &str, path: &str) -> Ctx {
     Ctx {
         method: method.to_string(),
         path: path.to_string(),
+        src,
     }
 }
 
@@ -182,11 +188,11 @@ mod tests {
 
     #[test]
     fn serves_the_site_pages() {
-        let home = route("GET", "/");
+        let home = route("GET", "/", None);
         assert_eq!(home.status, 200);
         assert!(home.body.contains("<h2>Now</h2>"));
 
-        let meditation = route("GET", "/meditation");
+        let meditation = route("GET", "/meditation", None);
         assert_eq!(meditation.status, 200);
         assert!(meditation.body.contains("<h2>Mindfulness</h2>"));
     }

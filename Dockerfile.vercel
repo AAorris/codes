@@ -1,13 +1,19 @@
 FROM rust:1.90 AS build
 
+# musl-gcc builds ring (rustls) for the static target.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends musl-tools \
+    && rm -rf /var/lib/apt/lists/*
 RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /src
 COPY . .
 
+# build.rs embeds functions/ and dev/ into the binary as the fallback archive.
 RUN cargo build \
     --release \
-    --target x86_64-unknown-linux-musl
+    --target x86_64-unknown-linux-musl \
+    --bin server
 
 FROM scratch
 
@@ -15,13 +21,9 @@ COPY --from=build \
     /src/target/x86_64-unknown-linux-musl/release/server \
     /server
 
-WORKDIR /site
-
-COPY functions/ /site/functions/
-COPY dev/ /site/dev/
-
-ENV RES_ROOT=/site
-
+# Content comes from ARCHIVE_BUCKET (set per Vercel environment) or, without it,
+# the embedded fallback. Nothing else ships in the image; TLS roots are
+# compiled in (webpki-roots), so scratch needs no CA bundle.
 EXPOSE 80
 
 CMD ["/server"]

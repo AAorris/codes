@@ -6,4 +6,5 @@
 # after the index route. The slash keeps it from matching "/meditations".
 route "GET" "/" "default"
 route "GET" "/meditation" "meditation"
+route "GET" "/northwestern-gate" "northwestern-gate"
 route "GET" "/systems" "systems"

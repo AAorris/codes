@@ -2,10 +2,29 @@
 name = "dockersite"
 version = "0.1.0"
 edition = "2024"
+default-run = "server"
+
+# TLS and SigV4 for signed S3 Express reads (kernel/s3.rs); everything else is std.
+[dependencies]
+hmac = "0.12.1"
+sha2 = "0.10.8"
+ureq = { version = "2.12.1", default-features = false, features = ["tls"] }
 
 [[bin]]
 name = "server"
 path = "kernel/main.rs"
+
+[[bin]]
+name = "put-archive"
+path = "kernel/put_archive.rs"
+
+[[bin]]
+name = "get-archive"
+path = "kernel/get_archive.rs"
+
+[[bin]]
+name = "promote"
+path = "kernel/promote.rs"
 
 [profile.release]
 opt-level = "z"
