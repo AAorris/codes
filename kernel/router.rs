@@ -47,6 +47,7 @@ impl Response {
 /// `archive_ref` selects a ref archive on preview deployments.
 pub fn route(method: &str, path: &str, archive_ref: Option<&str>) -> Response {
     let (src, origin) = res::snapshot(archive_ref);
+    res::begin_reads();
     let path = normalize_path(path);
     let target = resolve_route(&src, method, &path);
     let (name, default_status) = match &target {
@@ -63,6 +64,12 @@ pub fn route(method: &str, path: &str, archive_ref: Option<&str>) -> Response {
         .push(("x-archive-source".to_string(), origin.source));
     if let Some(etag) = origin.etag {
         response.headers.push(("x-archive-etag".to_string(), etag));
+    }
+    // Every content file this response was built from, so an editor can go
+    // from a URL to the files behind it.
+    let reads = res::take_reads();
+    if !reads.is_empty() {
+        response.headers.push(("x-fragments".to_string(), reads.join(", ")));
     }
     response
 }
