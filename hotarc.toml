@@ -1,0 +1,3 @@
+# Content roots shipped by hotarc. Must equal archive::CONTENT_ROOTS (kernel/archive.rs),
+# which build.rs embeds as the fallback; a unit test checks that they match.
+roots = ["functions", "dev/fragments", "dev/templates"]

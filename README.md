@@ -15,7 +15,6 @@ kernel/          Rust source (std, plus ureq/rustls + sha2/hmac for signed S3 re
   res.rs         content sources: disk (dev), S3 archives (deployed), embedded fallback
   s3.rs          S3 Express reads: Vercel OIDC -> STS -> CreateSession -> signed GET
   archive.rs     deterministic ustar pack/unpack of the content tree
-  archive_cli.rs put-archive / get-archive / promote (bins: put_archive.rs, …)
 build.rs         embeds functions/ and dev/ into the server as its fallback archive
 functions/       functions/route.f maps requests to functions; functions/404.f is the not-found page
 dev/fragments/   content (.html), styles (.css), and assets (.svg), organized in folders
@@ -144,14 +143,18 @@ image (`vercel --prod`) only when the kernel or the fallback should change.
 ### Content archives
 
 Everyday content ships as an archive — a deterministic tar of those three
-folders — in S3, with no image rebuild:
+folders — in S3, with no image rebuild, using
+`hotarc` (install with `cargo install --path <hotarc checkout>/cli`).
+Its content roots are in `hotarc.toml`, which a unit test keeps equal to the
+roots `build.rs` embeds:
 
 ```
-cargo run --bin put-archive               # -> archives/preview.tar
-cargo run --bin put-archive -- --ref      # -> archives/refs/<current branch>.tar
-cargo run --bin promote                   # preview.tar -> prod.tar, byte for byte
-cargo run --bin put-archive -- --prod     # -> archives/prod.tar
-cargo run --bin get-archive [-- --prod]   # fetch, record its ETag, list differences
+hotarc put               # -> archives/preview.tar
+hotarc put --ref         # -> archives/refs/<current branch>.tar
+hotarc promote           # preview.tar -> prod.tar, byte for byte
+hotarc put --prod        # -> archives/prod.tar
+hotarc get [--prod]      # fetch, record its ETag, list differences
+hotarc status | history | rollback | delete --ref <r>
 ```
 
 Settings live in `.archive/config.toml` (gitignored) as `key = "value"` lines —
@@ -161,7 +164,7 @@ override), `preview_url` — each overridable by `ARCHIVE_BUCKET`,
 Credentials come from the aws CLI.
 Writes are conditional on the ETag this checkout last saw
 (`.archive/<channel>.etag`, gitignored), so a put never replaces an archive
-someone else pushed: it exits `2`, and the fix is `get-archive`, reconcile, put
+someone else pushed: it exits `2`, and the fix is `hotarc get`, reconcile, put
 again (or `--force`). Directory buckets mint a new ETag on every write, so
 `promote` proves it shipped the verified bytes with a SHA-256 that S3 checks.
 

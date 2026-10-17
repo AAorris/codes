@@ -1,4 +1,4 @@
-#[allow(dead_code)] // packing is used by build.rs and the archive CLI
+#[allow(dead_code)] // packing is used by build.rs
 mod archive;
 mod fnlang;
 mod res;
