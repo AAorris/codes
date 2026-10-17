@@ -3,8 +3,8 @@
 //! An archive is an uncompressed ustar of the repo-relative content tree
 //! ([`CONTENT_ROOTS`]). Packing is deterministic — sorted entries, zero mtime,
 //! fixed modes — so identical content always produces identical bytes. The same
-//! format is embedded into the server binary as the fallback (see `build.rs`)
-//! and stored in S3 under `archives/{prod,preview,refs/<ref>}.tar`.
+//! format is embedded into the server binary as the fallback (see `build.rs`),
+//! packed and shipped by `hotarc` (roots in `hotarc.toml`), and stored in S3 under `archives/{prod,preview,refs/<ref>}.tar`.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -181,6 +181,26 @@ mod tests {
         assert_eq!(packed, pack(&tree).unwrap());
         assert_eq!(packed.len() % BLOCK, 0);
         assert_eq!(unpack(&packed).unwrap(), tree);
+    }
+
+    #[test]
+    fn content_roots_match_hotarc_toml() {
+        let toml = include_str!("../hotarc.toml");
+        let line = toml
+            .lines()
+            .find(|line| line.trim_start().starts_with("roots"))
+            .expect("roots in hotarc.toml");
+        let roots: Vec<&str> = line
+            .split_once('=')
+            .unwrap()
+            .1
+            .trim()
+            .trim_matches(['[', ']'])
+            .split(',')
+            .map(|root| root.trim().trim_matches('"'))
+            .filter(|root| !root.is_empty())
+            .collect();
+        assert_eq!(roots, CONTENT_ROOTS);
     }
 
     #[test]

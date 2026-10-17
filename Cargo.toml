@@ -14,18 +14,6 @@ ureq = { version = "2.12.1", default-features = false, features = ["tls"] }
 name = "server"
 path = "kernel/main.rs"
 
-[[bin]]
-name = "put-archive"
-path = "kernel/put_archive.rs"
-
-[[bin]]
-name = "get-archive"
-path = "kernel/get_archive.rs"
-
-[[bin]]
-name = "promote"
-path = "kernel/promote.rs"
-
 [profile.release]
 opt-level = "z"
 lto = true
