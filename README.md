@@ -7,11 +7,16 @@ into HTML.
 ## Layout
 
 ```
-kernel/          Rust source (std-only, no dependencies)
+kernel/          Rust source (std, plus ureq/rustls + sha2/hmac for signed S3 reads)
   main.rs        entry point; binds an address, optional CLI arg (default 0.0.0.0:8080)
   server.rs      std TCP listener, thread-per-connection, minimal HTTP/1.1 (GET/HEAD)
   router.rs      route via functions/route.f (method+path -> function name), 404/500 responses
   fnlang.rs      the function micro language interpreter
+  res.rs         content sources: disk (dev), S3 archives (deployed), embedded fallback
+  s3.rs          S3 Express reads: Vercel OIDC -> STS -> CreateSession -> signed GET
+  archive.rs     deterministic ustar pack/unpack of the content tree
+  archive_cli.rs put-archive / get-archive / promote (bins: put_archive.rs, …)
+build.rs         embeds functions/ and dev/ into the server as its fallback archive
 functions/       functions/route.f maps requests to functions; functions/404.f is the not-found page
 dev/fragments/   content (.html), styles (.css), and assets (.svg), organized in folders
 dev/fragments/meditation/   page folders, e.g. meditation/index.html (load "meditation")
@@ -131,13 +136,58 @@ curl -si http://127.0.0.1:8080/
 docker build -f Dockerfile.vercel -t dockersite .
 ```
 
-The build compiles a static musl binary and copies it, along with `functions/`
-and `dev/`, into a `scratch` runtime image. `production` serving (embedding or
-caching) is a later object of focus; the container currently serves the same
-reload-per-request behavior.
+The build compiles a static musl binary into a `scratch` image. `build.rs`
+embeds `functions/`, `dev/fragments/`, and `dev/templates/` into the binary as
+its *fallback archive*, so the image carries no content files. Redeploy the
+image (`vercel --prod`) only when the kernel or the fallback should change.
+
+### Content archives
+
+Everyday content ships as an archive — a deterministic tar of those three
+folders — in S3, with no image rebuild:
 
 ```
-vercel --prod
+cargo run --bin put-archive               # -> archives/preview.tar
+cargo run --bin put-archive -- --ref      # -> archives/refs/<current branch>.tar
+cargo run --bin promote                   # preview.tar -> prod.tar, byte for byte
+cargo run --bin put-archive -- --prod     # -> archives/prod.tar
+cargo run --bin get-archive [-- --prod]   # fetch, record its ETag, list differences
 ```
 
-Vercel can deploy natively with the Dockerfile.vercel
+Settings live in `.archive/config.toml` (gitignored) as `key = "value"` lines —
+`bucket`, `region`, `prefix` (default `archives`), `endpoint` (an S3 endpoint
+override), `preview_url` — each overridable by `ARCHIVE_BUCKET`,
+`ARCHIVE_REGION`, `ARCHIVE_PREFIX`, `ARCHIVE_ENDPOINT`, `ARCHIVE_PREVIEW_URL`.
+Credentials come from the aws CLI.
+Writes are conditional on the ETag this checkout last saw
+(`.archive/<channel>.etag`, gitignored), so a put never replaces an archive
+someone else pushed: it exits `2`, and the fix is `get-archive`, reconcile, put
+again (or `--force`). Directory buckets mint a new ETag on every write, so
+`promote` proves it shipped the verified bytes with a SHA-256 that S3 checks.
+
+The server reads archives from an S3 Express directory bucket when
+`ARCHIVE_BUCKET` and `ARCHIVE_REGION` are set (`ARCHIVE_PREFIX` defaults to
+`archives`). Reads are signed with a ReadOnly session; the credentials come
+from `AWS_ROLE_ARN` plus the Vercel OIDC token (the request's
+`x-vercel-oidc-token` header, else `VERCEL_OIDC_TOKEN`) via STS, or else from
+`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`. The role setup is in
+`.scratchpad/iam/`. (`ARCHIVE_BASE`, an unsigned plain-`http://` prefix, is for
+local stand-ins.)
+
+```
+ARCHIVE_CHANNEL=prod     -> prod.tar                      -> fallback
+ARCHIVE_CHANNEL=preview  -> refs/<ref>.tar -> preview.tar -> fallback
+```
+
+The channel defaults from `VERCEL_ENV` (production -> prod, else preview).
+The ref is the request's `x-archive-ref` header, else `ARCHIVE_REF` /
+`VERCEL_GIT_COMMIT_REF`; production ignores refs. An archive replaces the
+fallback as a whole. Archives are revalidated with `If-None-Match` at most every
+`ARCHIVE_TTL_MS` (default 2000), and the last good archive keeps serving while
+S3 is unreachable. Every response names its source in `x-archive-source`
+(`prod`, `preview`, `refs/<ref>`, `fallback`, or `disk`) and, for archives, its
+`x-archive-etag`:
+
+```
+curl -sI -H 'x-archive-ref: my-branch' https://<preview-url>/ | grep -i x-archive
+```

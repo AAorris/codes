@@ -1,0 +1,4 @@
+target/
+.scratchpad/
+.archive/
+.env*

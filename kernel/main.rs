@@ -1,6 +1,9 @@
+#[allow(dead_code)] // packing is used by build.rs and the archive CLI
+mod archive;
 mod fnlang;
 mod res;
 mod router;
+mod s3;
 mod server;
 
 fn main() {
