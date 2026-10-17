@@ -327,14 +327,7 @@ fn json_string(json: &str, field: &str) -> Option<String> {
 
 /// An environment variable, else a `key = "value"` line of `.archive/config.toml`.
 fn setting(key: &str, env_name: &str) -> Option<String> {
-    env(env_name).or_else(|| {
-        let config = fs::read_to_string(Path::new(".archive").join("config.toml")).ok()?;
-        config.lines().find_map(|line| {
-            let (name, value) = line.split_once('=')?;
-            let value = value.trim().trim_matches('"');
-            (name.trim() == key && !value.is_empty()).then(|| value.to_string())
-        })
-    })
+    env(env_name).or_else(|| archive::config(key))
 }
 
 fn env(name: &str) -> Option<String> {

@@ -7,6 +7,7 @@
 //! AWS credentials
 //!   AWS_ROLE_ARN + Vercel OIDC token -> STS AssumeRoleWithWebIdentity (~50 min)
 //!   else AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY [/ AWS_SESSION_TOKEN]
+//!   else the local aws CLI (`aws configure export-credentials`), for `--preview`
 //! -> CreateSession, ReadOnly (~4 min; sessions last 5)
 //! -> GetObject, SigV4 service "s3express" with x-amz-s3session-token
 //! ```
@@ -148,8 +149,30 @@ fn credentials(region: &str) -> Result<Creds, String> {
             secret,
             token: env("AWS_SESSION_TOKEN"),
         }),
-        _ => Err("no AWS credentials: set AWS_ROLE_ARN (Vercel OIDC) or AWS_ACCESS_KEY_ID".to_string()),
+        _ => aws_cli_credentials().ok_or_else(|| {
+            "no AWS credentials: set AWS_ROLE_ARN (Vercel OIDC) or AWS_ACCESS_KEY_ID, or sign in to the aws CLI".to_string()
+        }),
     }
+}
+
+/// Credentials from the local aws CLI's configured profile (absent in images).
+fn aws_cli_credentials() -> Option<Creds> {
+    let out = std::process::Command::new("aws")
+        .args(["configure", "export-credentials", "--format", "process"])
+        .output()
+        .ok()
+        .filter(|out| out.status.success())?;
+    let json = String::from_utf8_lossy(&out.stdout);
+    let field = |name: &str| {
+        let after = &json[json.find(&format!("\"{name}\""))? + name.len() + 2..];
+        let value = after.trim_start().strip_prefix(':')?.trim_start().strip_prefix('"')?;
+        Some(value[..value.find('"')?].to_string())
+    };
+    Some(Creds {
+        key_id: field("AccessKeyId")?,
+        secret: field("SecretAccessKey")?,
+        token: field("SessionToken"),
+    })
 }
 
 fn assume_role(role: &str, region: &str) -> Result<Creds, String> {

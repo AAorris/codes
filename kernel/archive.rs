@@ -137,6 +137,16 @@ fn octal(raw: &[u8]) -> Option<usize> {
     usize::from_str_radix(text, 8).ok()
 }
 
+/// A `key = "value"` line of the checkout's gitignored `.archive/config.toml`.
+pub fn config(key: &str) -> Option<String> {
+    let text = fs::read_to_string(Path::new(".archive").join("config.toml")).ok()?;
+    text.lines().find_map(|line| {
+        let (name, value) = line.split_once('=')?;
+        let value = value.trim().trim_matches('"');
+        (name.trim() == key && !value.is_empty()).then(|| value.to_string())
+    })
+}
+
 /// Archive name for a git ref: `refs/<slug>`, where anything outside
 /// `[A-Za-z0-9._-]` becomes `-` (so `feature/x` -> `refs/feature-x`).
 pub fn ref_name(git_ref: &str) -> Option<String> {

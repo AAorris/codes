@@ -122,7 +122,7 @@ pub fn run(source: &str, ctx: &Ctx, default_status: u16) -> Result<Out, String> 
                     let name = string_arg(&tokens, i + 1, "load")?;
                     i += 1;
                     match load_fragment(&ctx.src, &name) {
-                        Some(fragment) => stack.push(fragment),
+                        Some((path, fragment)) => stack.push(marked(&path, &fragment)),
                         None => stack.push(format!(
                             "<!-- missing fragment {}/{}.html -->",
                             res::FRAGMENTS,
@@ -237,13 +237,22 @@ fn include_fragments(src: &Snapshot, page: &str) -> String {
     out
 }
 
-fn load_fragment(src: &Snapshot, name: &str) -> Option<String> {
+/// The fragment's content and the path it came from.
+fn load_fragment(src: &Snapshot, name: &str) -> Option<(String, String)> {
     if !valid_fragment_path(name) {
         return None;
     }
     let base = res::FRAGMENTS;
-    src.read(&format!("{base}/{name}.html"))
-        .or_else(|| src.read(&format!("{base}/{name}/index.html")))
+    [format!("{base}/{name}.html"), format!("{base}/{name}/index.html")]
+        .into_iter()
+        .find_map(|path| src.read(&path).map(|content| (path, content)))
+}
+
+/// Prefix an HTML fragment with a comment naming its source file, so the
+/// rendered page says where each part can be edited.
+fn marked(path: &str, content: &str) -> String {
+    format!("<!-- fragment {path} -->
+{content}")
 }
 
 fn valid_fragment_path(name: &str) -> bool {
@@ -376,7 +385,7 @@ fn load_resource(src: &Snapshot, dir: &str, base: &str, path: &str, status: &mut
         && valid_slug(slug)
         && let Some(content) = src.read(&resource_path(dir, slug))
     {
-        return content;
+        return marked(&resource_path(dir, slug), &content);
     }
     *status = 404;
     src.read(&format!("{}/404.html", res::FRAGMENTS))

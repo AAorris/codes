@@ -43,8 +43,35 @@ pub enum Snapshot {
     Tree(Arc<Tree>),
 }
 
+thread_local! {
+    /// Content paths read while handling the current request (one thread per
+    /// request), reported in the `x-fragments` response header.
+    static READS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Start a fresh read log for this request.
+pub fn begin_reads() {
+    READS.with(|reads| reads.borrow_mut().clear());
+}
+
+/// The content paths read since [`begin_reads`], in first-read order.
+pub fn take_reads() -> Vec<String> {
+    READS.with(|reads| std::mem::take(&mut *reads.borrow_mut()))
+}
+
 impl Snapshot {
     pub fn read(&self, rel: &str) -> Option<String> {
+        let content = self.read_untracked(rel)?;
+        READS.with(|reads| {
+            let mut reads = reads.borrow_mut();
+            if !reads.iter().any(|seen| seen == rel) {
+                reads.push(rel.to_string());
+            }
+        });
+        Some(content)
+    }
+
+    fn read_untracked(&self, rel: &str) -> Option<String> {
         match self {
             Snapshot::Disk(root) => fs::read_to_string(format!("{root}/{rel}")).ok(),
             Snapshot::Tree(tree) => tree
